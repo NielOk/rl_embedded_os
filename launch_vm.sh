@@ -3,6 +3,9 @@ CLOUD_IMG="ubuntu-20.04-server-cloudimg-amd64.img"
 SEED_ISO="seed-mac.iso"
 SHARE_DIR="$HOME/RLTest"
 
+# Copy rl_file_agent to shared directory
+cp -r ./rl_file_agent ~/RLTest/
+
 qemu-system-x86_64 \
   -m 2048 \
   -smp 2 \
