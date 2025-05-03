@@ -79,7 +79,7 @@ impl RLAgent {
         let dest = format!("/home/nielok/frequent/{}", name);
         if fs::rename(filename, &dest).is_ok() {
             self.original_paths.insert(dest.clone(), filename.to_string());
-            println!("📦 Promoted to frequent/: {}", name);
+            println!("Promoted to frequent/: {}", name);
         }
     }
 
