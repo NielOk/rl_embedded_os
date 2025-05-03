@@ -1,0 +1,8 @@
+[package]
+name = "user"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aya = { git = "https://github.com/aya-rs/aya" }
+rand = "0.8"
