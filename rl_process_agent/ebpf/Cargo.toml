@@ -1,0 +1,18 @@
+[package]
+name = "ebpf"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+aya-bpf = { git = "https://github.com/aya-rs/aya", default-features = false }
+
+[build-dependencies]
+aya-tool = { git = "https://github.com/aya-rs/aya" }
+
+[profile.release]
+panic = "abort"
+lto = true
