@@ -7,7 +7,7 @@ BASE_DIRS = [
     "/home/nielok/sim_user",
     "/home/nielok/frequent"
 ]
-CLICK_INTERVAL = 0.1  # seconds
+CLICK_INTERVAL = 0.05  # seconds
 TEMPERATURE = 0.7
 
 SUBDIRS = [

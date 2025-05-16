@@ -1,5 +1,6 @@
 use aya::{include_bytes_aligned, Bpf};
 use aya::maps::ringbuf::RingBuf;
+use aya::programs::KProbe; // Needed for attaching kprobes
 use rand::Rng;
 use std::{
     collections::HashMap,
@@ -101,10 +102,27 @@ impl RLAgent {
     }
 }
 
+fn resolve_path(filename: &str) -> Option<String> {
+    let bases = ["/home/nielok/sim_user", "/home/nielok/frequent"];
+    for base in &bases {
+        let full = Path::new(base).join(filename);
+        if full.exists() {
+            return Some(full.to_string_lossy().to_string());
+        }
+    }
+    None
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut bpf = Bpf::load(include_bytes_aligned!(
         "../target/bpfel-unknown-none/release/ebpf"
     ))?;
+
+    // Attach trace_openat to __x64_sys_openat
+    let program: &mut KProbe = bpf.program_mut("trace_openat").unwrap().try_into()?;
+    program.load()?;
+    program.attach("__x64_sys_openat", 0)?;
+
     let mut ringbuf = RingBuf::try_from(bpf.map_mut("EVENTS")?)?;
     ringbuf.open()?;
 
@@ -117,25 +135,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         ringbuf.poll(Duration::from_secs(1), |data| {
             let event = unsafe { &*(data.as_ptr() as *const FileOpenEvent) };
-            let filename = str::from_utf8(&event.filename)
+            let rel_path = str::from_utf8(&event.filename)
                 .unwrap_or("")
                 .trim_end_matches(char::from(0))
                 .to_string();
 
-            if filename.is_empty() || !Path::new(&filename).exists() {
-                return Ok(());
-            }
+            println!("Raw filename from BPF: '{}'", rel_path);
 
-            println!("Access: {}", filename);
+            if let Some(full_path) = resolve_path(&rel_path) {
+                println!("Access: {}", full_path);
 
-            agent.reward(&filename);
+                agent.reward(&full_path);
 
-            let q_val = *agent.q.get(&filename).unwrap_or(&0.0);
+                let q_val = *agent.q.get(&full_path).unwrap_or(&0.0);
 
-            if q_val > 0.8 {
-                agent.promote(&filename);
-            } else if q_val < 0.2 {
-                agent.demote(&filename);
+                if q_val > 0.8 {
+                    agent.promote(&full_path);
+                } else if q_val < 0.2 {
+                    agent.demote(&full_path);
+                }
             }
 
             Ok(())

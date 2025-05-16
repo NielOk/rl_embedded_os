@@ -18,8 +18,8 @@ pub struct FileOpenEvent {
 #[map]
 static mut EVENTS: RingBuf<FileOpenEvent> = RingBuf::with_max_entries(1024);
 
-#[kprobe(name = "trace_open")]
-pub fn trace_open(ctx: KProbeContext) -> u32 {
+#[kprobe(name = "trace_openat")]
+pub fn trace_openat(ctx: KProbeContext) -> u32 {
     let mut event = FileOpenEvent {
         pid: unsafe { bpf_get_current_pid_tgid() as u32 },
         filename: [0; 256],
