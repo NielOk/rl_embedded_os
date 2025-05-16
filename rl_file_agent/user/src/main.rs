@@ -96,7 +96,10 @@ impl RLAgent {
             }
 
             if fs::rename(filename, original).is_ok() {
-                println!("Demoted back: {}", Path::new(filename).file_name().unwrap().to_str().unwrap_or("?"));
+                println!(
+                    "Demoted back: {}",
+                    Path::new(filename).file_name().unwrap().to_str().unwrap_or("?")
+                );
             }
         }
     }
@@ -118,7 +121,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../target/bpfel-unknown-none/release/ebpf"
     ))?;
 
-    // Attach trace_openat to __x64_sys_openat
     let program: &mut KProbe = bpf.program_mut("trace_openat").unwrap().try_into()?;
     program.load()?;
     program.attach("__x64_sys_openat", 0)?;
@@ -135,24 +137,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         ringbuf.poll(Duration::from_secs(1), |data| {
             let event = unsafe { &*(data.as_ptr() as *const FileOpenEvent) };
-            let rel_path = str::from_utf8(&event.filename)
-                .unwrap_or("")
-                .trim_end_matches(char::from(0))
-                .to_string();
+            let raw = &event.filename;
+            let utf8_attempt = str::from_utf8(raw);
 
-            println!("Raw filename from BPF: '{}'", rel_path);
+            match utf8_attempt {
+                Ok(s) => {
+                    let rel_path = s.trim_end_matches(char::from(0)).to_string();
 
-            if let Some(full_path) = resolve_path(&rel_path) {
-                println!("Access: {}", full_path);
+                    // 🔍 Full debug info for filename:
+                    println!("FILENAME (trimmed): {:?}", rel_path);
+                    println!("FULL UTF-8: {:?}", s);
+                    println!("RAW BYTES: {:?}", &raw[..32.min(raw.len())]);
 
-                agent.reward(&full_path);
+                    if let Some(full_path) = resolve_path(&rel_path) {
+                        println!("Access: {}", full_path);
 
-                let q_val = *agent.q.get(&full_path).unwrap_or(&0.0);
+                        agent.reward(&full_path);
 
-                if q_val > 0.8 {
-                    agent.promote(&full_path);
-                } else if q_val < 0.2 {
-                    agent.demote(&full_path);
+                        let q_val = *agent.q.get(&full_path).unwrap_or(&0.0);
+
+                        if q_val > 0.8 {
+                            agent.promote(&full_path);
+                        } else if q_val < 0.2 {
+                            agent.demote(&full_path);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("Invalid UTF-8 in filename: {:?}", e);
+                    println!("RAW BYTES: {:?}", &raw[..32.min(raw.len())]);
                 }
             }
 

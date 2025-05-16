@@ -6,6 +6,7 @@ sudo ls /sys/kernel/debug/tracing/available_filter_functions | grep openat
 
 sudo apt update
 sudo apt install -y pkg-config libssl-dev build-essential clang llvm libelf-dev libbpf-dev linux-headers-$(uname -r)
+sudo apt install linux-tools-$(uname -r)
 
 # Start the user simulator
 pip install -r requirements.txt
