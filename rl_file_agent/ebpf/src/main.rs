@@ -27,14 +27,14 @@ pub fn trace_openat(ctx: TracePointContext) -> u32 {
 
 fn try_trace_openat(ctx: &TracePointContext) -> Result<(), ()> {
     let pid_tgid = unsafe { bpf_get_current_pid_tgid() };
-    let pid = (pid_tgid & 0xFFFF_FFFF) as u32;
+    let pid = pid_tgid as u32;
 
-    // For sys_enter_openat, the second argument is `const char __user *filename`
-    let filename_ptr: *const u8 = ctx.read_at::<*const u8>(16).map_err(|_| ())?;
+    // ← Corrected offset here
+    let filename_ptr = ctx.read_at::<*const u8>(24).map_err(|_| ())?;
 
     let mut event = FileOpenEvent {
         pid,
-        filename: [0u8; 256],
+        filename: [0; 256],
     };
 
     unsafe {

@@ -11,6 +11,7 @@ use std::{
 };
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct FileOpenEvent {
     pub pid: u32,
     pub filename: [u8; 256],
