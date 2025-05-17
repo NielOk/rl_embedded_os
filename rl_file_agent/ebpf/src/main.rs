@@ -2,10 +2,9 @@
 #![no_main]
 
 use aya_bpf::{
-    macros::{map, kprobe},
+    macros::{map, tracepoint},
     maps::RingBuf,
-    programs::KProbeContext,
-    BpfContext,
+    programs::TracePointContext,
     helpers::{bpf_get_current_pid_tgid, bpf_probe_read_user_str},
 };
 
@@ -15,27 +14,34 @@ pub struct FileOpenEvent {
     pub filename: [u8; 256],
 }
 
-#[map]
+#[map(name = "EVENTS")]
 static mut EVENTS: RingBuf<FileOpenEvent> = RingBuf::with_max_entries(1024);
 
-#[kprobe(name = "trace_openat")]
-pub fn trace_openat(ctx: KProbeContext) -> u32 {
+#[tracepoint(name = "trace_openat")]
+pub fn trace_openat(ctx: TracePointContext) -> u32 {
+    match try_trace_openat(&ctx) {
+        Ok(_) => 0,
+        Err(_) => 1,
+    }
+}
+
+fn try_trace_openat(ctx: &TracePointContext) -> Result<(), ()> {
+    let pid_tgid = unsafe { bpf_get_current_pid_tgid() };
+    let pid = (pid_tgid & 0xFFFF_FFFF) as u32;
+
+    // For sys_enter_openat, the second argument is `const char __user *filename`
+    let filename_ptr: *const u8 = ctx.read_at::<*const u8>(16).map_err(|_| ())?;
+
     let mut event = FileOpenEvent {
-        pid: unsafe { bpf_get_current_pid_tgid() as u32 },
-        filename: [0; 256],
+        pid,
+        filename: [0u8; 256],
     };
 
-    // Get 2nd syscall argument (rsi on x86_64): const char *filename
-    let filename_ptr: *const u8 = unsafe { ctx.arg(1).unwrap_or(core::ptr::null()) as *const u8 };
-
-    if !filename_ptr.is_null() {
-        unsafe {
-            let res = bpf_probe_read_user_str(&mut event.filename, filename_ptr);
-            if res.is_ok() {
-                let _ = EVENTS.output(&ctx, &event, core::mem::size_of::<FileOpenEvent>() as u32);
-            }
-        }
+    unsafe {
+        bpf_probe_read_user_str(&mut event.filename, filename_ptr).map_err(|_| ())?;
+        EVENTS.output(ctx, &event, core::mem::size_of::<FileOpenEvent>() as u32)
+            .map_err(|_| ())?;
     }
 
-    0
+    Ok(())
 }

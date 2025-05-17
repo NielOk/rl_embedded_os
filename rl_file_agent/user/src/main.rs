@@ -1,6 +1,6 @@
 use aya::{include_bytes_aligned, Bpf};
 use aya::maps::ringbuf::RingBuf;
-use aya::programs::KProbe; // Needed for attaching kprobes
+use aya::programs::TracePoint;
 use rand::Rng;
 use std::{
     collections::HashMap,
@@ -121,9 +121,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../target/bpfel-unknown-none/release/ebpf"
     ))?;
 
-    let program: &mut KProbe = bpf.program_mut("trace_openat").unwrap().try_into()?;
+    let program: &mut TracePoint = bpf.program_mut("trace_openat").unwrap().try_into()?;
     program.load()?;
-    program.attach("__x64_sys_openat", 0)?;
+    program.attach("syscalls", "sys_enter_openat")?;
 
     let mut ringbuf = RingBuf::try_from(bpf.map_mut("EVENTS")?)?;
     ringbuf.open()?;
@@ -144,7 +144,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(s) => {
                     let rel_path = s.trim_end_matches(char::from(0)).to_string();
 
-                    // 🔍 Full debug info for filename:
                     println!("FILENAME (trimmed): {:?}", rel_path);
                     println!("FULL UTF-8: {:?}", s);
                     println!("RAW BYTES: {:?}", &raw[..32.min(raw.len())]);
