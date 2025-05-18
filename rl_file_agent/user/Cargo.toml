@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aya = { git = "https://github.com/aya-rs/aya", package = "aya", rev = "2d3fc4d" }
+aya-bpf = { path = "/home/nielok/aya/aya/ebpf/aya-ebpf" }
 rand = "0.8"
