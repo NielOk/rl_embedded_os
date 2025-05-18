@@ -15,13 +15,23 @@ source $HOME/.cargo/env
 # Install cargo-generate (optional)
 cargo install cargo-generate
 
-cd ebpf
-cargo build --release --target bpfel-unknown-none
+git clone https://github.com/aya-rs/aya.git ~/aya
+cd ~/aya
+git checkout v0.13.1
+
+cd /mnt/hostshare/ebpf
+echo "Building eBPF program for bpfel-unknown-none..."
+cargo +nightly build --release --target bpfel-unknown-none -Z build-std=core
 cd ../user
 cargo build --release
-sudo ./target/release/user
+sudo ./target/release/user & # Start user program in background
+
+USER_PID=$!
 
 # Start the user simulator
 cd ../
 pip install -r requirements.txt
 python3 simulate_user.py
+
+# Stop the user program
+kill $USER_PID

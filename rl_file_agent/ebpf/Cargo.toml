@@ -5,10 +5,10 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-aya-bpf = { git = "https://github.com/aya-rs/aya", package = "aya-bpf", rev = "2d3fc4d", default-features = false }
+aya-bpf = { path = "/home/nielok/aya/aya/ebpf/aya-ebpf" }
 
 [build-dependencies]
-aya-tool = { git = "https://github.com/aya-rs/aya", package = "aya-tool", rev = "2d3fc4d" }
+aya-tool = { path = "/home/nielok/aya/aya/aya-tool" }
 
 [lib]
 crate-type = ["cdylib"]
