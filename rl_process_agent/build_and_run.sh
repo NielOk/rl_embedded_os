@@ -8,10 +8,6 @@ sudo apt update
 sudo apt install -y pkg-config libssl-dev build-essential clang llvm libelf-dev libbpf-dev linux-headers-$(uname -r)
 sudo apt install linux-tools-$(uname -r)
 
-# Start the user simulator
-pip install -r requirements.txt
-python3 simulate_processes.py
-
 # Install Rust
 sudo apt remove rustc cargo
 curl https://sh.rustup.rs -sSf | sh
@@ -38,3 +34,8 @@ sudo bpftool prog attach name trace_connect type kprobe attach_prog __x64_sys_co
 sudo bpftool prog attach name trace_switch  type kprobe attach_prog sched_switch
 
 sudo ./target/release/user
+
+# Start the user simulator
+cd ../
+pip install -r requirements.txt
+python3 simulate_processes.py

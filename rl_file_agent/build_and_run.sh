@@ -22,5 +22,6 @@ cargo build --release
 sudo ./target/release/user
 
 # Start the user simulator
+cd ../
 pip install -r requirements.txt
 python3 simulate_user.py
